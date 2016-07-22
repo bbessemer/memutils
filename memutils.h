@@ -39,10 +39,10 @@ void remove_item_from_list (void*** items, size_t* count, void* item);
 
 /* Returns the length of a string, not including the null byte.
  * Functions identically to POSIX strlen, but potentially faster. */
-size_t my_strlen (const char* str);
+size_t mu_strlen (const char* str);
 
 /* Allocates a buffer and copies src into it. */
-char* my_strdup (const char* src);
+char* mu_strdup (const char* src);
 
 /* Concatenates str1 and str2 into a newly allocated buffer. */
 char* astrcat (const char* str1, const char* str2);
@@ -53,8 +53,8 @@ char* astrcat (const char* str1, const char* str2);
 size_t strsplit (char*** parts, char* str, char split);
 
 #define memcpy copy_memory
-#define strlen my_strlen
-#define strdup my_strdup
-#define strcpy my_strcpy
+#define strlen mu_strlen
+#define strdup mu_strdup
+#define strcpy mu_strcpy
 
 #endif

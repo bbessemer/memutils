@@ -160,8 +160,9 @@ void remove_item_from_list (void*** items, size_t* count, void* item)
 #define haszero64(v) (((v) - 0x0101010101010101) & ~(v) & 0x8080808080808080)
 #define hasval64(x,n) (haszero((x) ^ (0x0101010101010101 * (n))))
 
-size_t my_strlen (const char* str)
+size_t mu_strlen (const char* str)
 {
+  if (!str) return 0;
   uint64_t* ip = (uint64_t*)(str);
   while (normal(!haszero64(*ip))) ip++;
   char* p = (char*)(ip);
@@ -169,15 +170,16 @@ size_t my_strlen (const char* str)
   return (size_t)(p - str);
 }
 
-char* my_strcpy (char* dest, const char* src)
+char* mu_strcpy (char* dest, const char* src)
 {
-  copy_memory(dest, src, my_strlen(src));
+  if (src && dest) copy_memory(dest, src, mu_strlen(src));
   return dest;
 }
 
-char* my_strdup (const char* src)
+char* mu_strdup (const char* src)
 {
-  register size_t len = my_strlen(src) + 1;
+  if (!src) return NULL;
+  register size_t len = mu_strlen(src) + 1;
   char* dest = (char*) safe_malloc(len, 0);
   copy_memory(dest, src, len);
   return dest;
@@ -185,16 +187,17 @@ char* my_strdup (const char* src)
 
 char* astrcat (const char* str1, const char* str2)
 {
-  register size_t len1 = my_strlen(str1);
-  register size_t len2 = my_strlen(str2);
+  register size_t len1 = mu_strlen(str1);
+  register size_t len2 = mu_strlen(str2);
   char* dest = (char*) safe_malloc(len1 + len2, 0);
-  copy_memory(dest, str1, len1);
-  copy_memory(dest + len1, str2, len2);
+  if (str1) copy_memory(dest, str1, len1);
+  if (str2) copy_memory(dest + len1, str2, len2);
   return dest;
 }
 
 size_t strsplit (char*** parts, char* str, char split)
 {
+  if (!str) return 0;
   size_t partcount = 0;
   for (; normal(*str); str++)
   {
