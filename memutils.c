@@ -8,7 +8,7 @@
  *
  * Written 2015-16 by Brent Bessemer.
  * Several of the functions in this file are inspired by similar counterparts
- * in Seth Carter's Slice engine.
+ * in Seth Carter's Slice engine. <http://glassblade-games.com/slice-engine>
  *
  * To the maximum extent permissible by law, this file is hereby released
  * into the public domain.
