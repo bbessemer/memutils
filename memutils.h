@@ -52,6 +52,9 @@ char* astrcat (const char* str1, const char* str2);
  * by parts, and returns the number of parts. */
 size_t strsplit (char*** parts, char* str, char split);
 
+char* strjoin (char** strings, size_t count, char* joiner);
+unsigned char streq (const char* str1, const char* str2);
+
 #define memcpy copy_memory
 #define strlen mu_strlen
 #define strdup mu_strdup

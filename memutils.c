@@ -14,9 +14,7 @@
  * into the public domain.
  */
 
-#include <stdint.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include "memutils.h"
 
 #ifndef true
@@ -24,6 +22,19 @@
 #endif
 #ifndef false
 #define false 0
+#endif
+
+/* Uncomment the following line if you can guarantee that you will ALWAYS
+ * supply a non-null error callback to safe_malloc and safe_realloc. */
+
+//#define CALLBACK_ALWAYS_SUPPLIED
+#define DEFAULT_CALLBACK 0
+
+#ifdef CALLBACK_ALWAYS_SUPPLIED
+#define CALLBACK_NONNULL true
+#else
+#define CALLBACK_NONNULL err_callback
+#include <stdio.h>
 #endif
 
 #ifdef UNSAFE_SKIP_CHECKS
@@ -36,23 +47,23 @@
 
 void zero_memory (char* buf, size_t len)
 {
-  while (normal(len >= 8))
+  while (normal(len >= sizeof(unsigned long)))
   {
-    *(uint64_t *)(buf) = 0;
-    buf += 8;
-    len -= 8;
+    *(unsigned long*)(buf) = 0;
+    buf += sizeof(unsigned long);
+    len -= sizeof(unsigned long);
   }
-  if (len >= 4)
+  if (len >= sizeof(unsigned int))
   {
-    *(uint32_t *)(buf) = 0;
-    buf += 4;
-    len -= 4;
+    *(unsigned int *)(buf) = 0;
+    buf += sizeof(unsigned int);
+    len -= sizeof(unsigned int);
   }
-  if (len >= 2)
+  if (len >= sizeof(unsigned short))
   {
-    *(short *)(buf) = 0;
-    buf += 2;
-    len -= 2;
+    *(unsigned short *)(buf) = 0;
+    buf += sizeof(unsigned short);
+    len -= sizeof(unsigned short);
   }
   if (len)
     *buf = 0;
@@ -60,29 +71,29 @@ void zero_memory (char* buf, size_t len)
 
 void copy_memory (char* buf, const char* src, size_t len)
 {
-  while (len >= 8)
+  while (normal(len >= sizeof(unsigned long)))
   {
-    *(uint64_t*)(buf) = *(uint64_t*)(src);
-    buf += 8;
-    src += 8;
-    len -= 8;
+    *(unsigned long*)(buf) = *(unsigned long*)(src);
+    buf += sizeof(unsigned long);
+    len -= sizeof(unsigned long);
+    src += sizeof(unsigned long);
   }
-  if (len >= 4)
+  if (len >= sizeof(unsigned int))
   {
-    *(uint32_t*)(buf) = *(uint32_t*)(src);
-    buf += 4;
-    src += 4;
-    len -= 4;
+    *(unsigned int *)(buf) = *(unsigned int*)(src);
+    buf += sizeof(unsigned int);
+    len -= sizeof(unsigned int);
+    src += sizeof(unsigned int);
   }
-  if (len >= 2)
+  if (len >= sizeof(unsigned short))
   {
-    *(short*)(buf) = *(short*)(src);
-    buf += 2;
-    src += 2;
-    len -= 2;
+    *(unsigned short *)(buf) = *(unsigned short*)(src);
+    buf += sizeof(unsigned short);
+    len -= sizeof(unsigned short);
+    src += sizeof(unsigned short);
   }
   if (len)
-    *buf = 0;
+    *buf = *src;
 }
 
 
@@ -95,7 +106,7 @@ void* safe_malloc (size_t len, void (*err_callback) (char*))
     return ptr;
   else
   {
-    if (err_callback)
+    if (CALLBACK_NONNULL)
       err_callback("FATAL: Memory allocation error!\n");
     else
       puts("FATAL: Memory allocation error!\n");
@@ -110,7 +121,7 @@ void* safe_realloc (void* old, size_t len, void (*err_callback) (char*))
     return ptr;
   else
   {
-    if (err_callback)
+    if (CALLBACK_NONNULL)
       err_callback("FATAL: Memory allocation error!\n");
     else
       puts("FATAL: Memory allocation error!\n");
@@ -125,18 +136,20 @@ void add_item_to_list (void*** items, size_t* count, void* item)
 {
   if (normal(items && count))
   {
-    if (rare(!(*count % CHUNK_SIZE)))
+    if (!*items) *items = safe_malloc(CHUNK_SIZE * PSIZE, NULL);
+    else if (rare(!(*count % CHUNK_SIZE)))
       *items = safe_realloc(*items, PSIZE * (*count + CHUNK_SIZE), 0);
-    *items[*count] = item;
+    (*items)[*count] = item;
     *count += 1;
   }
 }
 
 void remove_item_from_list (void*** items, size_t* count, void* item)
 {
+  register int i;
   if (normal(items && count))
   {
-    for (int i = 0; i < *count; i++)
+    for (i = 0; i < *count; i++)
     {
       if (*items[i] == item)
       {
@@ -158,13 +171,21 @@ void remove_item_from_list (void*** items, size_t* count, void* item)
  */
 
 #define haszero64(v) (((v) - 0x0101010101010101) & ~(v) & 0x8080808080808080)
-#define hasval64(x,n) (haszero((x) ^ (0x0101010101010101 * (n))))
+#define haszero32(v) (((v) - 0x01010101) & ~(v) & 0x80808080)
+#define hasval64(x,n) (haszero64((x) ^ (0x0101010101010101 * (n))))
 
 size_t mu_strlen (const char* str)
 {
   if (!str) return 0;
-  uint64_t* ip = (uint64_t*)(str);
-  while (normal(!haszero64(*ip))) ip++;
+  unsigned long* ip = (unsigned long*)(str);
+  if (sizeof(unsigned long) > 4)
+  {
+    while (normal(!haszero64(*ip))) ip++;
+  }
+  else
+  {
+    while (normal(!haszero32(*ip))) ip++;
+  }
   char* p = (char*)(ip);
   while (normal(*p)) p++;
   return (size_t)(p - str);
@@ -180,7 +201,7 @@ char* mu_strdup (const char* src)
 {
   if (!src) return NULL;
   register size_t len = mu_strlen(src) + 1;
-  char* dest = (char*) safe_malloc(len, 0);
+  char* dest = (char*) safe_malloc(len, DEFAULT_CALLBACK);
   copy_memory(dest, src, len);
   return dest;
 }
@@ -189,7 +210,7 @@ char* astrcat (const char* str1, const char* str2)
 {
   register size_t len1 = mu_strlen(str1);
   register size_t len2 = mu_strlen(str2);
-  char* dest = (char*) safe_malloc(len1 + len2, 0);
+  char* dest = (char*) safe_malloc(len1 + len2, DEFAULT_CALLBACK);
   if (str1) copy_memory(dest, str1, len1);
   if (str2) copy_memory(dest + len1, str2, len2);
   return dest;
@@ -199,6 +220,7 @@ size_t strsplit (char*** parts, char* str, char split)
 {
   if (!str) return 0;
   size_t partcount = 0;
+  add_item_to_list((void***)(parts), &partcount, str);
   for (; normal(*str); str++)
   {
     if (rare(*str == split))
@@ -208,4 +230,51 @@ size_t strsplit (char*** parts, char* str, char split)
     }
   }
   return partcount;
+}
+
+char* strjoin (char** strings, size_t count, char* joiner)
+{
+  char *out1, *out2, *temp;
+  temp = astrcat(*strings, joiner);
+  out1 = astrcat(temp, *(++strings));
+  free(temp);
+  while (--count > 1)
+  {
+    temp = astrcat(out1, joiner);
+    out2 = astrcat(temp, *(++strings));
+    free(temp);
+    free(out1);
+    out1 = out2;
+  }
+  return out1;
+}
+
+unsigned char streq (const char* str1, const char* str2)
+{
+  unsigned long* ip1 = (unsigned long*)(str1);
+  unsigned long* ip2 = (unsigned long*)(str2);
+  if (sizeof(unsigned long) > 4)
+  {
+    while (normal(!(haszero64(*ip1) || haszero64(*ip2))))
+    {
+      if (*ip1 != *ip2) return 0;
+      ip1++; ip2++;
+    }
+  }
+  else
+  {
+    while (normal(!(haszero32(*ip1) || haszero32(*ip2))))
+    {
+      if (*ip1 != *ip2) return 0;
+      ip1++; ip2++;
+    }
+  }
+  char* p1 = (char*)(ip1);
+  char* p2 = (char*)(ip2);
+  while (normal(*p1 && *p2))
+  {
+    if (*p1 != *p2) return 0;
+    p1++; p2++;
+  }
+  return !(*p1 || *p2);
 }
