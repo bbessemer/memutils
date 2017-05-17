@@ -234,6 +234,11 @@ size_t strsplit (char*** parts, char* str, char split)
 
 char* strjoin (char** strings, size_t count, char* joiner)
 {
+  if (count == 0) {
+    char* out = malloc(1);
+    *out = 0;
+    return out;
+  }
   char *out1, *out2, *temp;
   temp = astrcat(*strings, joiner);
   out1 = astrcat(temp, *(++strings));

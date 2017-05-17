@@ -19,6 +19,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Sets len bytes in buf to zero */
 void zero_memory (char* buf, size_t len);
 
@@ -54,6 +58,10 @@ size_t strsplit (char*** parts, char* str, char split);
 
 char* strjoin (char** strings, size_t count, char* joiner);
 unsigned char streq (const char* str1, const char* str2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #define memcpy copy_memory
 #define strlen mu_strlen
