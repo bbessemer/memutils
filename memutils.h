@@ -62,10 +62,10 @@ unsigned char streq (const char* str1, const char* str2);
 #ifdef __cplusplus
 }
 #endif
-
+/*
 #define memcpy copy_memory
 #define strlen mu_strlen
 #define strdup mu_strdup
 #define strcpy mu_strcpy
-
+*/
 #endif
